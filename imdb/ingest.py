@@ -5,6 +5,7 @@ import click
 from google.cloud import storage
 from google.cloud import bigquery
 from google.oauth2 import service_account
+from google.api_core.exceptions import Conflict
 
 
 BASE_URL = "https://datasets.imdbws.com/"
@@ -36,9 +37,7 @@ def convert_to_parquet(raw_filename, parquet_filename):
 def upload_to_gcs(filename, destination):
     print(f"\tUploading to GCS {filename} in {destination}...")
 
-    credentials = service_account.Credentials.from_service_account_file(
-        os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    )
+    credentials = service_account.Credentials.from_service_account_file(os.getenv("p"))
     client = storage.Client(project=PROJECT_ID, credentials=credentials)
     bucket = client.bucket(BUCKET_NAME)
     blob = bucket.blob(destination)
@@ -53,6 +52,8 @@ def ensure_dataset_exists(dataset_id):
 
     try:
         client.get_dataset(dataset_ref)
+    except Conflict:
+        print(f"\tDataset {dataset_ref} already exists")
     except Exception:
         dataset = bigquery.Dataset(dataset_ref)
         dataset.location = "EU"  # or "US" depending on your preference
