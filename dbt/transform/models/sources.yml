@@ -1,0 +1,75 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze_christophe
+    tables:
+      - name: title_basics
+        description: "Contains basic information for titles"
+        columns:
+          - name: tconst
+            description: "Alphanumeric unique identifier of the title"
+          - name: titleType
+            description: "The type/format of the title (e.g. movie, short, tvseries, tvepisode, video, etc)"
+          - name: primaryTitle
+            description: "The more popular title / the title used by the filmmakers on promotional materials at the point of release"
+          - name: originalTitle
+            description: "Original title, in the original language"
+          - name: isAdult
+            description: "0: non-adult title; 1: adult title"
+          - name: startYear
+            description: "Represents the release year of a title. In the case of TV Series, it is the series start year"
+          - name: endYear
+            description: "TV Series end year. '\\N' for all other title types"
+          - name: runtimeMinutes
+            description: "Primary runtime of the title, in minutes"
+          - name: genres
+            description: "Includes up to three genres associated with the title"
+      - name: title_ratings
+        description: "Contains ratings information for titles"
+        columns:
+          - name: tconst
+            description: "Alphanumeric unique identifier of the title"
+          - name: averageRating
+            description: "Weighted average of all the individual user ratings"
+          - name: numVotes
+            description: "Number of votes the title has received"
+      - name: name_basics
+        description: "Contains information about people in the industry"
+        columns:
+          - name: nconst
+            description: "Alphanumeric unique identifier of the name/person"
+          - name: primaryName
+            description: "Name by which the person is most often credited"
+          - name: birthYear
+            description: "Birth year in YYYY format"
+          - name: deathYear
+            description: "Death year in YYYY format if applicable, else '\\N'"
+          - name: primaryProfession
+            description: "The top-3 professions of the person"
+          - name: knownForTitles
+            description: "Titles the person is known for"
+      - name: title_crew
+        description: "Contains director and writer information for titles"
+        columns:
+          - name: tconst
+            description: "Alphanumeric unique identifier of the title"
+          - name: directors
+            description: "Director(s) of the given title"
+          - name: writers
+            description: "Writer(s) of the given title"
+      - name: title_principals
+        description: "Contains the principal cast/crew for titles"
+        columns:
+          - name: tconst
+            description: "Alphanumeric unique identifier of the title"
+          - name: ordering
+            description: "A number to uniquely identify rows for a given titleId"
+          - name: nconst
+            description: "Alphanumeric unique identifier of the name/person"
+          - name: category
+            description: "The category of job that person was in"
+          - name: job
+            description: "The specific job title if applicable"
+          - name: characters
+            description: "The name of the character played if applicable"
