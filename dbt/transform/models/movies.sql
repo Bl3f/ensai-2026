@@ -36,6 +36,7 @@ SELECT
 	t.title,
 	t.original_title,
 	t.runtime_minutes,
+	t.release_year,
 
 	/* Ratings */
 	r.average_rating,

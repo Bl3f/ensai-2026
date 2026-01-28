@@ -1,121 +1,43 @@
 # pip install streamlit
 # streamlit run chat.py
+# From tutorial: "Build a chatgpt like app" on Streamlit website
 
-# import streamlit as st
-# import pandas as pd
-# import numpy as np
-
-# st.title("Chat with IMDb data")
-
+import streamlit as st
 from openai import OpenAI
-import json
-from google.cloud import bigquery
+import os
+from main import run
 
-client = OpenAI()
+st.title("Chat with IMDb")
 
-# TODO: add the schema of the IMDb database (BigQuery) in the prompt by reading it from BigQuery
+# Set OpenAI API key from Streamlit secrets
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Set a default model
+if "openai_model" not in st.session_state:
+    st.session_state["openai_model"] = "gpt-5.2"
 
-def get_prompt(schema):
-    base_prompt = """
-You are an assistant that answer movies related questions.
-"""
-    for table in schema:
-        base_prompt += f"\nTable: `{table['name']}`\n"
-        for column in table["schema"]:
-            base_prompt += f"- {column['name']} ({column['type']})\n"
-            if column["type"] == "RECORD" and column["fields"]:
-                for field in column["fields"]:
-                    base_prompt += f"\t- {field['name']} ({field['type']})\n"
-    return base_prompt
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-def column_to_dict(column):
-    result = {"name": column.name, "type": column.field_type}
-    if column.field_type == "RECORD" and column.fields:
-        result["fields"] = [column_to_dict(field) for field in column.fields]
-    return result
+# Accept user input
+if prompt := st.chat_input("What is up?"):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-
-def get_schema():
-    client = bigquery.Client(project="ensai-2026")
-    dataset_id = "silver_christophe"
-    tables = ["movies", "dim_actors", "dim_directors"]
-
-    schema = []
-    client.get_dataset(dataset_id)
-    for table in tables:
-        table_schema = client.get_table(f"{dataset_id}.{table}").schema
-        table_schema = [column_to_dict(column) for column in table_schema]
-        schema.append({"name": dataset_id + "." + table, "schema": table_schema})
-    return schema
-
-
-def execute_sql(sql_query):
-    print("Executing SQL query...")
-    client = bigquery.Client(project="ensai-2026")
-    query_job = client.query(sql_query)
-    results = query_job.result()
-    return results.to_dataframe().to_string()
-
-
-tools = [
-    {
-        "type": "function",
-        "name": "execute_sql",
-        "description": "Execute a SQL query on the IMDb database (BigQuery).",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "sql_query": {
-                    "type": "string",
-                    "description": "SQL query to execute on the IMDb database (BigQuery).",
-                }
-            },
-            "required": ["sql_query"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-]
-
-
-def run_agent(prompt):
-    print("Running agent...")
-    messages = [
-        {"role": "system", "content": prompt},
-        {
-            "role": "user",
-            "content": input("What do you want to know about the IMDb database?"),
-        },
-    ]
-    should_continue = True
-    while should_continue:
-        response = client.responses.create(
-            model="gpt-5.2",
-            input=messages,
-            tools=tools,  # type: ignore
-            reasoning=None,
+if st.session_state.messages:
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+        response = run(
+            prompt, st.session_state["openai_model"], st.session_state.messages
         )
-
-        for output in response.output:
-            if output.type == "function_call":
-                messages.append(output.model_dump())
-                if output.name == "execute_sql":
-                    result = execute_sql(json.loads(output.arguments)["sql_query"])
-                    messages.append(
-                        {
-                            "type": "function_call_output",
-                            "call_id": output.call_id,
-                            "output": json.dumps({"result": result}),
-                        }
-                    )
-            else:
-                should_continue = False
-
-        print(response.output_text)
-
-
-schema = get_schema()
-prompt = get_prompt(schema)
-run_agent(prompt)
+        response = st.write(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
