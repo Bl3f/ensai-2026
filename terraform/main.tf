@@ -4,38 +4,58 @@ provider "google" {
   zone    = var.zone
 }
 
-resource "google_storage_bucket" "test-bucket" {
-  name     = "christophe-bucket-tf-2"
-  location = "EU"
+resource "google_service_account" "vm_sa" {
+  account_id   = "christophe-vm-sa"
+  display_name = "Christophe VM Service Account"
+}
 
-  uniform_bucket_level_access = true
-  labels = {
-    environment = "dev"
-  }
+resource "google_project_iam_member" "ar_reader" {
+  project = "ensai-2026"
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.vm_sa.email}"
+}
+
+resource "google_compute_address" "ip_address" {
+  name = "christophe-vm-ip"
 }
 
 resource "google_compute_instance" "default" {
-  name         = "christophe-instance-tf"
+  name         = "christophe-vm"
   machine_type = "n2-standard-2"
   zone         = var.zone
+  tags         = ["http-server"]
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-11"
+      image = "cos-cloud/cos-stable"
     }
-  }
-
-  // Local SSD disk
-  scratch_disk {
-    interface = "NVME"
   }
 
   network_interface {
     network = "default"
 
     access_config {
-      // Ephemeral public IP
+      nat_ip = google_compute_address.ip_address.address
     }
+  }
+
+  metadata = {
+    gce-container-declaration = <<-EOT
+      spec:
+        containers:
+          - image: europe-docker.pkg.dev/ensai-2026/christophe/prenoms-api:latest
+            name: prenoms-api
+            ports:
+              - containerPort: 8000
+                hostPort: 80
+                protocol: TCP
+        restartPolicy: Always
+    EOT
+  }
+
+  service_account {
+    email  = google_service_account.vm_sa.email
+    scopes = ["cloud-platform"]
   }
 }
 

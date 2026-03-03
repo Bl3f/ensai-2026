@@ -40,7 +40,9 @@ jobs:
         with:
           context: prenoms
           push: true
-          tags: ${{ env.IMAGE }}
+          tags: |
+            ${{ env.IMAGE }}
+            europe-docker.pkg.dev/ensai-2026/christophe/prenoms-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
